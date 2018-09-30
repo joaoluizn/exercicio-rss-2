@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    android:key="@+id/pref_screen">
+    <PreferenceCategory android:title="Altere a fonte RSS">
+        <ListPreference
+            android:entries="@array/other_feeds"
+            android:entryValues="@array/other_feeds"
+            android:key="rssfeed"
+            android:title="Lista de Fontes"
+            android:dialogTitle="Escolha uma feed"
+            android:defaultValue="@string/rssfeed"
+            />
+    </PreferenceCategory>
+</PreferenceScreen>

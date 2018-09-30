@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="other_feeds">
+        <item name="source_1">http://leopoldomt.com/if1001/g1brasil.xml</item>
+        <item name="source_2">http://pox.globo.com/rss/g1/brasil/</item>
+        <item name="source_3">http://pox.globo.com/rss/g1/ciencia-e-saude/</item>
+        <item name="source_4">http://pox.globo.com/rss/g1/tecnologia/</item>
+        <item name="source_5">http://rss.cnn.com/rss/edition.rss</item>
+    </string-array>
+</resources>
