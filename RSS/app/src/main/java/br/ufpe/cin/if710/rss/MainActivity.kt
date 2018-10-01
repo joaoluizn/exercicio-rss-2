@@ -1,29 +1,50 @@
 package br.ufpe.cin.if710.rss
 
 import android.app.Activity
-import android.content.Intent
+import android.app.PendingIntent.getActivity
+import android.content.*
+import android.net.Uri
 import android.os.Bundle
 import android.preference.PreferenceManager
+import android.support.v4.content.LocalBroadcastManager
 import android.support.v7.widget.DividerItemDecoration
 import android.support.v7.widget.LinearLayoutManager
-import android.util.Log
 import android.view.Menu
 import kotlinx.android.synthetic.main.activity_main.*
 import org.jetbrains.anko.doAsync
 import org.jetbrains.anko.uiThread
-import java.io.IOException
-import java.net.URL
 import android.view.MenuItem
-import java.util.ArrayList
+import android.widget.Toast
 
 
-class MainActivity : Activity() {
+class MainActivity : Activity(){
+
+//    Receiver dinamico para tratar a atualização da pagina
+    private val mMessageReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            // Get extra data included in the Intent
+            Toast.makeText(applicationContext, "BroadCast Recebido", Toast.LENGTH_SHORT).show()
+            var feed: List<ItemRSS> = intent.getSerializableExtra("UnreadData") as List<ItemRSS>
+            Toast.makeText(applicationContext, feed.size.toString(), Toast.LENGTH_SHORT).show()
+
+            doAsync {
+                uiThread {
+                    Toast.makeText(applicationContext, "Atualizando Tela", Toast.LENGTH_SHORT).show()
+                    conteudoRSS.adapter = ConteudoRSS(feed, applicationContext)
+                }
+            }
+        }
+    }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         conteudoRSS.layoutManager = LinearLayoutManager(this)
         conteudoRSS.addItemDecoration(DividerItemDecoration(this, LinearLayoutManager.VERTICAL))
+//        Registrando o receiver dinamico
+        LocalBroadcastManager.getInstance(this).registerReceiver(
+                mMessageReceiver, IntentFilter(DownloadRSSService.DOWNLOAD_COMPLETE))
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -48,56 +69,30 @@ class MainActivity : Activity() {
 
     override fun onStart() {
         super.onStart()
-        try {
-//            Usando anko e doAsync para tratar requisições em outra thread
-            val prefs = PreferenceManager.getDefaultSharedPreferences(this)
-            doAsync {
-                // Using default from shared preferences
-                val prefsSource = prefs.getString(RSS_SOURCE, getString(R.string.rssfeed))
-                val feedXML = ParserRSS.parse(getRssFeed(prefsSource))
-                val unreadFeed = ArrayList<ItemRSS>()
-
-                for (e in feedXML){
-                    Log.d("DB", "Buscando no Banco por link: " + e.link)
-                    var item = database.getItemRSS(e.link)
-                    if(item == null){
-                        Log.d("DB", "Encontrado pela primeira vez: " + e.title)
-                        database.insertItem(e)
-                    }else{
-                        if(!item.readStatus){
-                            unreadFeed.add(e)
-                        }
-                    }
-                }
-                uiThread {
-//                  provendo conteudo para a lista através do custom adapter
-                    conteudoRSS.adapter = ConteudoRSS(unreadFeed, it)
-                }
-            }
-        } catch (e: IOException) {
-            e.printStackTrace()
-        }
-
+//        Configuração baseada nas preferencias e inicio de serviço
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        val prefsSource = prefs.getString(RSS_SOURCE, getString(R.string.rssfeed))
+        val downloadService = Intent(applicationContext, DownloadRSSService::class.java)
+        downloadService.data = Uri.parse(prefsSource)
+        startService(downloadService)
+        Toast.makeText(applicationContext, "Iniciou o Service", Toast.LENGTH_SHORT).show()
     }
 
+//    Gerenciamento de receivers dinamico nos diferentes estados
     override fun onResume() {
+        LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver, IntentFilter(DownloadRSSService.DOWNLOAD_COMPLETE));
         super.onResume()
-        //Obtém o valor para a preference de nome de usuário
-//        val source = prefs.getString(RSS_SOURCE, "Ainda n escolheu...")
-//        textoUsername.text = user_name
     }
 
     override fun onDestroy() {
         database.close()
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mMessageReceiver)
         super.onDestroy()
     }
 
-//  Para esse exemplo achei mais elegante apenas usar o padrão de kotlin
-//  mas encontrei uma lib chamada khttp que parece ser Bem util e eficiente para projetos maiores.
-    @Throws(IOException::class)
-    private fun getRssFeed(feed: String): String {
-//        Solicitando o conteudo do xml
-        return URL(feed).readText()
+    override fun onPause() {
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mMessageReceiver)
+        super.onPause()
     }
 
     companion object {

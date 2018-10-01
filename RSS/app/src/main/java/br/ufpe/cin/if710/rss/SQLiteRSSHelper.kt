@@ -31,6 +31,7 @@ class SQLiteRSSHelper private constructor(private var c: Context) : SQLiteOpenHe
 
     //IMPLEMENTAR ABAIXO
     //Implemente a manipulação de dados nos métodos auxiliares para não ficar criando consultas manualmente
+//    Implementaçao utilizando funções de escrita e leitura do banco
     fun insertItem(item: ItemRSS): Long {
         return insertItem(item.title, item.pubDate, item.description, item.link)
     }
